@@ -22,6 +22,15 @@ use piston::Size;
 pub struct Ball {
     x: f64, 
     y: f64,
+    initial_velocity_x: f64, 
+    final_velocity_x: f64,
+    initial_velocity_y: f64, 
+    final_velocity_y: f64,
+    initial_pos_x: f64, // to calc velocity
+    initial_pos_y: f64,
+    time: f64, 
+    accn_x: f64,
+    accn_y: f64,
     radius: f64,
     gl: GlGraphics
 }
@@ -59,12 +68,36 @@ impl Ball {
         }
     }
 
+    fn update_pos_x(&mut self, dt: f64) {
+        // v = u + a*t
+        // s = u*t + 0.5*a*t^2
+        let u = self.final_velocity_x; 
+        let a = self.accn_x; 
+        let time = dt;
+        let v = u + (a * time); 
+        self.final_velocity_x = v; 
+        let dist_m = (u * time) + (0.5 * a * time * time); 
+        let dist_pix = dist_m * 37.795275590551; 
+        self.x += dist_pix;
+    }
+
+    fn update_pos_y(&mut self, dt: f64) {
+        let u = self.final_velocity_y; 
+        let a = self.accn_y; 
+        let time = dt;
+        let v = u + (a * time); 
+        self.final_velocity_y = v; 
+        let dist_m = (u * time) + (0.5 * a * time * time); 
+        let dist_pix = dist_m * 37.795275590551; 
+        self.y += dist_pix;
+    }
+
 }
 
 fn main() {
     let opengl = OpenGL::V3_2;
 
-    let mut window: Window = WindowSettings::new("test", [800, 500])
+    let mut window: Window = WindowSettings::new("test", [1400, 1000])
         .graphics_api(opengl)
         .exit_on_esc(true)
         .build()
@@ -76,7 +109,16 @@ fn main() {
     let mut ball = Ball {
         x: 0.0, 
         y: 0.0,
-        radius: 100.0, 
+        radius: 25.0, 
+        initial_velocity_x: 0.0, 
+        final_velocity_x: 0.0,
+        initial_velocity_y: 0.0, 
+        final_velocity_y: 0.0,
+        initial_pos_x: 0.0, 
+        initial_pos_y: 0.0,
+        time: 0.0,
+        accn_x: 0.0,
+        accn_y: 9.8,
         gl: GlGraphics::new(opengl)
     };
 
@@ -87,6 +129,7 @@ fn main() {
     let mut dx: f64 = 0.0; 
     let mut dy: f64 = 0.0; 
     let mut dt: f64 = 0.0;
+    // stroes if ball is moving due to user input
     let mut ball_moving: bool = false; 
 
     while let Some(e) = events.next(&mut window) {
@@ -112,6 +155,14 @@ fn main() {
                 match prev_mouse_button {
                     Some(MouseButton::Left) => {
                         if ball_moving || ball.cursor_on_ball(&cursor_pos) {
+                            if !ball_moving {
+                                ball_moving = true; 
+                                ball.time = 0.0;
+                                ball.initial_pos_x = ball.x; 
+                                ball.initial_pos_y = ball.y;
+                                ball.accn_x = 0.0; 
+                                ball.accn_y = 9.8;
+                            }
                             e.mouse_relative(|d| {
                                 dx = d[0]; 
                                 dy = d[1];
@@ -126,19 +177,41 @@ fn main() {
             }
 
             ButtonState::Release => {
-                ball_moving = false;
+                if ball_moving {
+                    ball_moving = false; 
+                    ball.final_velocity_x = (ball.x - ball.initial_pos_x) / (ball.time * 37.795275590551); 
+                    ball.final_velocity_y = (ball.y - ball.initial_pos_y) / (ball.time * 37.795275590551); 
+                    ball.accn_x = ball.final_velocity_x / ball.time; 
+                    ball.accn_y += ball.final_velocity_y / ball.time;
+                    ball.initial_pos_x = 0.0; 
+                    ball.initial_pos_y = 0.0;
+                    println!("x: {}", ball.x); 
+                    println!("y: {}", ball.y); 
+                    println!("velocity x: {}", ball.final_velocity_x);
+                    println!("velocity y: {}", ball.final_velocity_y); 
+                    println!("acceleration x: {}", ball.accn_x); 
+                    println!("acceleration y: {}", ball.accn_y);
+                    println!("time: {}", ball.time);
+                }
             }
-
-            _ => {}
-        }
-        
-        if let Some(args) = e.render_args() {
-            ball.render(&args);
         }
 
         if let Some(args) = e.update_args() { 
-            println!("speed x: {}", (dx / 3779.5275590551) / args.dt);
-            println!("speed y: {}", (dy / 3779.5275590551) / args.dt);
+            ball.time += args.dt;
+            if !ball_moving {
+                ball.update_pos_x(args.dt);
+                ball.update_pos_y(args.dt);
+                // ball y: 3145218.765062486
+                // ball y: 3291144.792249985
+                // println!("ball x: {}", ball.x); 
+                // println!("ball y: {}", ball.y);
+                // println!("acceleration x: {}", ball.accn_x); 
+                // println!("acceleration y: {}", ball.accn_y);
+            }
+        }
+
+        if let Some(args) = e.render_args() {
+            ball.render(&args);
         }
 
         e.mouse_cursor(|pos| {
