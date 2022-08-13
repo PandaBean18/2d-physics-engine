@@ -181,8 +181,6 @@ fn main() {
                     ball_moving = false; 
                     ball.final_velocity_x = (ball.x - ball.initial_pos_x) / (ball.time * 37.795275590551); 
                     ball.final_velocity_y = (ball.y - ball.initial_pos_y) / (ball.time * 37.795275590551); 
-                    ball.accn_x = ball.final_velocity_x / ball.time; 
-                    ball.accn_y += ball.final_velocity_y / ball.time;
                     ball.initial_pos_x = 0.0; 
                     ball.initial_pos_y = 0.0;
                     println!("x: {}", ball.x); 
