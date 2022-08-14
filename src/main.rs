@@ -31,8 +31,14 @@ pub struct Ball {
     time: f64, 
     accn_x: f64,
     accn_y: f64,
+    dir_x: i8, 
+    dir_y: i8,
     radius: f64,
     gl: GlGraphics
+}
+
+pub struct Wall {
+    points: Vec<[f64; 2]>
 }
 
 impl Ball {
@@ -79,6 +85,11 @@ impl Ball {
         let dist_m = (u * time) + (0.5 * a * time * time); 
         let dist_pix = dist_m * 37.795275590551; 
         self.x += dist_pix;
+        if self.final_velocity_x > 0.0 {
+            self.dir_x = 1;
+        } else {
+            self.dir_x = -1;
+        }
     }
 
     fn update_pos_y(&mut self, dt: f64) {
@@ -90,6 +101,11 @@ impl Ball {
         let dist_m = (u * time) + (0.5 * a * time * time); 
         let dist_pix = dist_m * 37.795275590551; 
         self.y += dist_pix;
+        if self.final_velocity_y > 0.0 {
+            self.dir_y = 1;
+        } else {
+            self.dir_y = -1;
+        }
     }
 
 }
@@ -97,7 +113,7 @@ impl Ball {
 fn main() {
     let opengl = OpenGL::V3_2;
 
-    let mut window: Window = WindowSettings::new("test", [1400, 1000])
+    let mut window: Window = WindowSettings::new("test", [800, 500])
         .graphics_api(opengl)
         .exit_on_esc(true)
         .build()
@@ -105,7 +121,7 @@ fn main() {
 
     let mut events = Events::new(EventSettings::new());
     let mut touch_visualizer = TouchVisualizer::new();
-
+    
     let mut ball = Ball {
         x: 0.0, 
         y: 0.0,
@@ -119,6 +135,8 @@ fn main() {
         time: 0.0,
         accn_x: 0.0,
         accn_y: 9.8,
+        dir_x: 1, 
+        dir_y: 1,
         gl: GlGraphics::new(opengl)
     };
 
@@ -134,9 +152,6 @@ fn main() {
 
     while let Some(e) = events.next(&mut window) {
         touch_visualizer.event(window.size(), &e);
-
-        //dy = 0.0; 
-        //dx = 0.0;
 
         e.mouse_cursor(|pos| {
             cursor_pos = pos;
@@ -197,14 +212,24 @@ fn main() {
         if let Some(args) = e.update_args() { 
             ball.time += args.dt;
             if !ball_moving {
+                if ball.x <= 0.0 && ball.dir_x == -1 {
+                    ball.dir_x = 1;
+                    ball.final_velocity_x = -1.0 * (0.6 * ball.final_velocity_x);
+                } else if ball.x >= window.size().width - 50.0 && ball.dir_x == 1 {
+                    ball.dir_x = -1; 
+                    ball.final_velocity_x = -1.0 * (0.6 * ball.final_velocity_x);
+                }
+
+                if ball.y <= 0.0 && ball.dir_y == -1 {
+                    ball.dir_y= 1;
+                    ball.final_velocity_y = -1.0 * (0.6 * ball.final_velocity_y);
+                } else if ball.y >= window.size().height - 50.0 && ball.dir_y == 1 {
+                    ball.dir_y = -1; 
+                    ball.final_velocity_y = -1.0 * (0.6 * ball.final_velocity_y);
+                }
+
                 ball.update_pos_x(args.dt);
                 ball.update_pos_y(args.dt);
-                // ball y: 3145218.765062486
-                // ball y: 3291144.792249985
-                // println!("ball x: {}", ball.x); 
-                // println!("ball y: {}", ball.y);
-                // println!("acceleration x: {}", ball.accn_x); 
-                // println!("acceleration y: {}", ball.accn_y);
             }
         }
 
